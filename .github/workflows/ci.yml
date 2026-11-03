@@ -59,12 +59,13 @@ jobs:
 
   airflow-dag:
     runs-on: ubuntu-latest
-    container: apache/airflow:3.1.0-python3.11
     steps:
       - uses: actions/checkout@v4
-      - run: pip install pytest && airflow db migrate > /dev/null
-        env: {AIRFLOW__CORE__LOAD_EXAMPLES: "false"}
-      - run: python -m pytest -q -p no:cacheprovider tests/dag
+      - name: DAG integrity inside the official Airflow 3.1 image
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo -e AIRFLOW__CORE__LOAD_EXAMPLES=false \
+            apache/airflow:3.1.0-python3.11 bash -c \
+            "pip install -q pytest && airflow db migrate > /dev/null && python -m pytest -q -p no:cacheprovider tests/dag"
 
   compose-config:
     runs-on: ubuntu-latest
