@@ -1,0 +1,8 @@
+{"bench": "latency", "label": "live, 50 rides/s", "events": 24105, "events_per_sec": 83.1, "window_s": 290, "p50_ms": 127.3, "p95_ms": 219.2, "p99_ms": 227.6, "max_ms": 276.9, "at": "2026-11-03T03:45:35+00:00"}
+{"bench": "latency", "label": "live, 400 rides/s", "events": 185183, "events_per_sec": 1028.8, "window_s": 180, "p50_ms": 136.1, "p95_ms": 231.0, "p99_ms": 239.2, "max_ms": 310.3, "at": "2026-11-03T03:51:18+00:00"}
+{"bench": "throughput", "batch_size": 1, "messages": 8612, "consume_seconds": 25.38, "msgs_per_sec": 339, "producer_msgs_per_sec": 21504, "exact": true, "at": "2026-11-03T04:26:42+00:00"}
+{"bench": "throughput", "batch_size": 100, "messages": 124789, "consume_seconds": 9.53, "msgs_per_sec": 13090, "producer_msgs_per_sec": 28260, "exact": true, "at": "2026-11-03T04:27:00+00:00"}
+{"bench": "throughput", "batch_size": 500, "messages": 124789, "consume_seconds": 5.81, "msgs_per_sec": 21487, "producer_msgs_per_sec": 29702, "exact": true, "at": "2026-11-03T04:27:14+00:00"}
+{"bench": "throughput", "batch_size": 2000, "messages": 124789, "consume_seconds": 4.84, "msgs_per_sec": 25796, "producer_msgs_per_sec": 28505, "exact": true, "at": "2026-11-03T04:27:27+00:00"}
+{"bench": "throughput", "batch_size": 5000, "messages": 124789, "consume_seconds": 4.58, "msgs_per_sec": 27227, "producer_msgs_per_sec": 28939, "exact": true, "at": "2026-11-03T04:27:40+00:00"}
+{"bench": "chaos", "sigkills": 5, "messages": 525722, "expected_unique_valid": 519489, "expected_malformed": 1017, "duplicates_injected": 5216, "raw_events": 519489, "late": 493, "dead_letters": 1017, "window_event_sum": 518996, "stream_fare": 149928220, "batch_on_time_fare": 149928220, "raw_exact": true, "dlq_exact": true, "windows_exact": true, "at": "2026-11-03T04:29:22+00:00"}

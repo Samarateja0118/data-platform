@@ -1,0 +1,9 @@
+version: 2
+seeds:
+  - name: zones
+    description: Static zone reference data. Ids match ridestream.generator.ZONE_WEIGHTS.
+    config:
+      column_types: {zone_id: int, is_airport: boolean}
+    columns:
+      - name: zone_id
+        data_tests: [unique, not_null]

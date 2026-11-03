@@ -1,0 +1,89 @@
+name: data-platform
+
+x-app-env: &app-env
+  KAFKA_BOOTSTRAP: redpanda:9092
+  PG_DSN: postgresql://platform:platform@postgres:5432/warehouse
+  ALLOWED_LATENESS_S: "30"
+
+services:
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda start
+      - --mode dev-container
+      - --smp 1
+      - --memory 1G
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+    ports: ["19092:19092", "9644:9644"]
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 3s
+      retries: 40
+
+  topics:
+    image: redpandadata/redpanda:v24.2.7
+    depends_on: {redpanda: {condition: service_healthy}}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >
+        rpk -X brokers=redpanda:9092 topic create rides.events -p 6 -r 1 -c retention.ms=86400000 || true;
+        rpk -X brokers=redpanda:9092 topic create rides.events.dlq -p 1 -r 1 || true
+    restart: "no"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: platform
+      POSTGRES_DB: warehouse
+    ports: ["5432:5432"]
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./sql/airflow-db.sql:/docker-entrypoint-initdb.d/02-airflow.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d warehouse"]
+      interval: 2s
+      retries: 30
+
+  consumer:
+    build: {context: ., dockerfile: docker/app.Dockerfile}
+    image: data-platform-app:latest
+    command: ["python", "-m", "ridestream.consumer"]
+    environment: *app-env
+    depends_on:
+      topics: {condition: service_completed_successfully}
+      postgres: {condition: service_healthy}
+    restart: unless-stopped
+
+  producer:
+    image: data-platform-app:latest
+    command: ["python", "-m", "ridestream.producer", "live", "--rides-per-sec", "5"]
+    environment: *app-env
+    depends_on:
+      consumer: {condition: service_started}
+    restart: unless-stopped
+
+  airflow:
+    build: {context: ., dockerfile: docker/airflow.Dockerfile}
+    image: data-platform-airflow:latest
+    command: ["standalone"]
+    environment:
+      <<: *app-env
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: "15"
+      DBT_PROJECT_DIR: /opt/airflow/dbt
+      DBT_PROFILES_DIR: /opt/airflow/dbt
+      PG_HOST: postgres
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./dbt/ridestream:/opt/airflow/dbt
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+volumes:
+  pgdata:

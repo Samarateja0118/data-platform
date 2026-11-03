@@ -1,0 +1,17 @@
+{
+  "messages_sent": 525722,
+  "delivery_failures": 0,
+  "unique_valid_events": 519489,
+  "by_kind": {
+    "normal": 501604,
+    "out_of_order": 15786,
+    "duplicate": 5216,
+    "malformed": 1017,
+    "late": 2099
+  },
+  "mode": "backfill",
+  "seed": 11,
+  "sim_minutes": 240.0,
+  "publish_seconds": 18.46,
+  "publish_rate_msg_s": 28477
+}

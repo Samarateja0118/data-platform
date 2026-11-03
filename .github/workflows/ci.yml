@@ -1,0 +1,74 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q tests/unit
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: {POSTGRES_USER: platform, POSTGRES_PASSWORD: platform, POSTGRES_DB: warehouse}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U platform" --health-interval 2s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Redpanda
+        run: |
+          docker run -d --name redpanda -p 19092:19092 redpandadata/redpanda:v24.2.7 \
+            redpanda start --mode dev-container --smp 1 --memory 1G \
+            --kafka-addr 0.0.0.0:19092 --advertise-kafka-addr localhost:19092
+          for i in $(seq 1 40); do docker exec redpanda rpk cluster health | grep -q 'Healthy:.*true' && break; sleep 2; done
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -e ".[dev,dbt]"
+      - name: dbt parse (compiles every model and test)
+        working-directory: dbt/ridestream
+        run: dbt parse --profiles-dir .
+      - name: End-to-end pipeline tests
+        run: pytest -q -m integration tests/integration
+      - name: Throughput smoke (batch 2000, 30 simulated minutes)
+        run: python scripts/bench.py throughput --batches 2000 --minutes 30
+      - name: Crash-recovery smoke (3 x SIGKILL)
+        run: python scripts/bench.py chaos --minutes 60 --rate 10 --kills 3 --kill-after 12
+      - name: Fail if any benchmark lost or double-counted data
+        run: |
+          python - <<'PY'
+          import json
+          rows = [json.loads(l) for l in open("results/bench.jsonl")]
+          for r in rows:
+              print(r)
+              if r["bench"] == "throughput": assert r["exact"], r
+              if r["bench"] == "chaos": assert r["raw_exact"] and r["dlq_exact"] and r["windows_exact"], r
+          PY
+
+  airflow-dag:
+    runs-on: ubuntu-latest
+    container: apache/airflow:3.1.0-python3.11
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pytest && airflow db migrate > /dev/null
+        env: {AIRFLOW__CORE__LOAD_EXAMPLES: "false"}
+      - run: python -m pytest -q -p no:cacheprovider tests/dag
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker build -f docker/app.Dockerfile -t data-platform-app:ci .

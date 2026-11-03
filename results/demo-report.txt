@@ -1,0 +1,47 @@
+==> report
+== Stream health
+ partitions |          last_commit          |       global_watermark       
+------------+-------------------------------+------------------------------
+          6 | 2026-11-03 04:35:32.805836+00 | 2026-11-03 04:35:02.01754+00
+(1 row)
+
+== Landing zone
+ events | late | dead_letters 
+--------+------+--------------
+   4110 |    2 |           13
+(1 row)
+
+== Produce -> queryable latency, last 5 minutes (ms)
+  p50  |  p95  |  p99  
+-------+-------+-------
+ 124.2 | 216.5 | 225.7
+(1 row)
+
+== Latest closed streaming windows (busiest zones)
+      window_start      | zone_id | requests | completions | cancellations | gross_fare_cents 
+------------------------+---------+----------+-------------+---------------+------------------
+ 2026-11-03 04:34:00+00 |       1 |       58 |           0 |             5 |                0
+ 2026-11-03 04:34:00+00 |       2 |       52 |           0 |             5 |                0
+ 2026-11-03 04:34:00+00 |       3 |       37 |           0 |             1 |                0
+ 2026-11-03 04:34:00+00 |       6 |       35 |           0 |             3 |                0
+ 2026-11-03 04:34:00+00 |       4 |       32 |           0 |             5 |                0
+ 2026-11-03 04:34:00+00 |       5 |       24 |           0 |             2 |                0
+(6 rows)
+
+== Ride status (batch, fct_rides)
+     status      | count 
+-----------------+-------
+ driver_en_route |  1271
+ in_trip         |   327
+ awaiting_driver |   225
+ cancelled       |   124
+(4 rows)
+
+== Stream vs batch reconciliation (Airflow runs)
+ run_id |          checked_at           | windows_checked | windows_matched | late_events | passed 
+--------+-------------------------------+-----------------+-----------------+-------------+--------
+      2 | 2026-11-03 04:35:30.60146+00  |              60 |              60 |           1 | t
+      1 | 2026-11-03 04:30:34.920093+00 |              12 |              12 |           0 | t
+(2 rows)
+
+

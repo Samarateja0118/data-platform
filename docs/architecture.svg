@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#444"/>
+    </marker>
+    <style>
+      .box{fill:#fff;stroke:#333;stroke-width:1.4;rx:8}
+      .s{fill:#eef5ff}.b{fill:#f1f9ee}.w{fill:#fff8e8}.o{fill:#f6f0fb}
+      .t{font-weight:bold}.small{font-size:11px;fill:#444}
+      .ln{stroke:#444;stroke-width:1.4;fill:none;marker-end:url(#a)}
+      .dash{stroke-dasharray:5 4}
+      .lane{font-size:12px;fill:#666;font-weight:bold;letter-spacing:1px}
+    </style>
+  </defs>
+  <rect width="980" height="520" fill="#fff"/>
+
+  <text x="20" y="28" class="lane">STREAMING PATH (seconds)</text>
+  <text x="20" y="318" class="lane">BATCH ELT PATH (every 15 min)</text>
+  <line x1="20" y1="296" x2="960" y2="296" stroke="#ddd"/>
+
+  <!-- streaming -->
+  <rect x="20" y="50" width="170" height="96" class="box s"/>
+  <text x="34" y="74" class="t">Ride simulator</text>
+  <text x="34" y="94" class="small">12 zones, finite drivers</text>
+  <text x="34" y="110" class="small">+ dupes, out-of-order,</text>
+  <text x="34" y="126" class="small">late, malformed events</text>
+
+  <rect x="240" y="50" width="170" height="96" class="box s"/>
+  <text x="254" y="74" class="t">Redpanda</text>
+  <text x="254" y="94" class="small">rides.events (6 partitions,</text>
+  <text x="254" y="110" class="small">keyed by ride_id)</text>
+  <text x="254" y="126" class="small">rides.events.dlq</text>
+
+  <rect x="460" y="50" width="200" height="120" class="box s"/>
+  <text x="474" y="74" class="t">Stream processor</text>
+  <text x="474" y="94" class="small">validate -> DLQ</text>
+  <text x="474" y="110" class="small">event-time watermarks</text>
+  <text x="474" y="126" class="small">1-min tumbling windows/zone</text>
+  <text x="474" y="142" class="small">one Postgres txn per batch:</text>
+  <text x="474" y="158" class="small">rows + windows + offsets</text>
+
+  <rect x="720" y="40" width="240" height="236" class="box o"/>
+  <text x="734" y="64" class="t">Postgres warehouse</text>
+  <text x="734" y="88" class="small">raw.ride_events  (dedup on event_id)</text>
+  <text x="734" y="106" class="small">stream.zone_minute_metrics</text>
+  <text x="734" y="124" class="small">ops.consumer_offsets (+ watermark)</text>
+  <text x="734" y="142" class="small">ops.dead_letters</text>
+  <line x1="734" y1="156" x2="946" y2="156" stroke="#ccc"/>
+  <text x="734" y="176" class="small">staging.stg_ride_events</text>
+  <text x="734" y="194" class="small">marts.fct_rides (incremental)</text>
+  <text x="734" y="212" class="small">marts.dim_zones / dim_drivers</text>
+  <text x="734" y="230" class="small">marts.agg_zone_hourly / driver_daily</text>
+  <text x="734" y="248" class="small">marts.recon_stream_vs_batch</text>
+  <text x="734" y="266" class="small">ops.reconciliation_runs</text>
+
+  <path d="M190 98 H236" class="ln"/>
+  <path d="M410 98 H456" class="ln"/>
+  <path d="M660 110 H716" class="ln"/>
+  <text x="668" y="130" class="small">COPY +</text><text x="668" y="145" class="small">merge</text>
+
+  <!-- batch -->
+  <rect x="20" y="340" width="300" height="160" class="box w"/>
+  <text x="34" y="364" class="t">Airflow 3 DAG  ridestream_elt</text>
+  <text x="34" y="388" class="small">1 stream_health_gate (consumer not stalled)</text>
+  <text x="34" y="406" class="small">2 dbt source freshness</text>
+  <text x="34" y="424" class="small">3 dbt seed (zones)</text>
+  <text x="34" y="442" class="small">4 dbt build staging + intermediate</text>
+  <text x="34" y="460" class="small">5 dbt build marts (models + tests)</text>
+  <text x="34" y="478" class="small">6 record_reconciliation -> ops table</text>
+
+  <rect x="380" y="340" width="280" height="160" class="box b"/>
+  <text x="394" y="364" class="t">dbt project</text>
+  <text x="394" y="388" class="small">fct_rides: incremental on ingestion time,</text>
+  <text x="394" y="404" class="small">rebuilds any ride that got a late event</text>
+  <text x="394" y="428" class="small">tests: unique / not_null / relationships /</text>
+  <text x="394" y="444" class="small">accepted_values / custom generics,</text>
+  <text x="394" y="460" class="small">unit test, lifecycle order, DLQ rate,</text>
+  <text x="394" y="476" class="small">stream == batch for every closed window</text>
+
+  <path d="M320 420 H376" class="ln"/>
+  <path d="M660 420 H840 V280" class="ln"/>
+  <path d="M800 280 V380 H664" class="ln dash"/>
+  <text x="676" y="372" class="small">reads raw + stream</text>
+  <text x="676" y="436" class="small">writes staging / marts</text>
+</svg>

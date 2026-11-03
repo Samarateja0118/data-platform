@@ -1,0 +1,71 @@
+version: 2
+
+models:
+  - name: fct_rides
+    description: One row per ride, rebuilt incrementally whenever any of its events arrives (late ones included).
+    columns:
+      - name: ride_id
+        data_tests: [unique, not_null]
+      - name: zone_id
+        data_tests:
+          - not_null
+          - relationships: {arguments: {to: ref('dim_zones'), field: zone_id}}
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [completed, cancelled, in_trip, driver_en_route, awaiting_driver, incomplete]
+      - name: cancel_reason
+        data_tests:
+          - accepted_values:
+              arguments: {values: [rider_cancelled, no_driver, driver_cancelled]}
+      - name: wait_s
+        data_tests: [non_negative]
+      - name: trip_s
+        data_tests: [non_negative]
+      - name: fare_cents
+        data_tests: [non_negative]
+
+  - name: dim_zones
+    columns:
+      - name: zone_id
+        data_tests: [unique, not_null]
+
+  - name: dim_drivers
+    columns:
+      - name: driver_id
+        data_tests: [unique, not_null]
+
+  - name: agg_zone_hourly
+    data_tests:
+      - unique_combination: {arguments: {columns: [hour, zone_id]}}
+    columns:
+      - name: completion_rate
+        data_tests: [non_negative]
+
+  - name: agg_driver_daily
+    data_tests:
+      - unique_combination: {arguments: {columns: [ride_date, driver_id]}}
+
+  - name: recon_stream_vs_batch
+    description: Closed streaming windows vs a batch recomputation from raw. Any non-zero diff is a bug.
+
+unit_tests:
+  - name: status_prefers_completion_and_handles_missing_request
+    model: fct_rides
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('int_ride_lifecycle')
+        rows:
+          - {ride_id: r1, zone_id: 1, requested_at: "2026-11-01 08:00:00+00", assigned_at: "2026-11-01 08:00:30+00", started_at: "2026-11-01 08:03:00+00", completed_at: "2026-11-01 08:15:00+00", fare_cents: 1500}
+          - {ride_id: r2, zone_id: 1, requested_at: "2026-11-01 08:00:00+00", cancelled_at: "2026-11-01 08:02:00+00", cancel_reason: no_driver}
+          - {ride_id: r3, zone_id: 2, assigned_at: "2026-11-01 08:00:30+00"}
+      - input: ref('stg_ride_events')   # only referenced by the incremental filter
+        rows: []
+    expect:
+      rows:
+        - {ride_id: r1, status: completed, wait_s: 30.0, trip_s: 720.0}
+        - {ride_id: r2, status: cancelled, wait_s: null, trip_s: null}
+        - {ride_id: r3, status: driver_en_route, wait_s: null, trip_s: null}

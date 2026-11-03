@@ -1,0 +1,13 @@
+zone_id,zone_name,district,is_airport
+1,Downtown Core,Central,false
+2,Financial District,Central,false
+3,University Hill,North,false
+4,Riverside,West,false
+5,Old Town,Central,false
+6,Midtown,Central,false
+7,Harbor,East,false
+8,Tech Park,North,false
+9,Stadium District,East,false
+10,Westgate,West,false
+11,International Airport,South,true
+12,Lakeside,South,false

@@ -1,0 +1,30 @@
+name: ridestream
+version: "1.0.0"
+config-version: 2
+profile: ridestream
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: target
+clean-targets: ["target", "dbt_packages", "logs"]
+
+models:
+  ridestream:
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+
+seeds:
+  ridestream:
+    +schema: marts
+
+flags:
+  send_anonymous_usage_stats: false
