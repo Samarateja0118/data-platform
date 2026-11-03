@@ -1,5 +1,7 @@
 # data-platform
 
+[![ci](https://github.com/Samarateja0118/data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Samarateja0118/data-platform/actions/workflows/ci.yml)
+
 A small but complete data platform for a simulated ride-hailing marketplace.
 One warehouse, two paths into it:
 
@@ -12,6 +14,8 @@ One warehouse, two paths into it:
 
 Everything runs with `make demo` on a laptop (Docker Compose), and every number
 below was measured with the scripts in this repo.
+
+**At a glance:** 525,722 messages consumed while the consumer was `SIGKILL`ed five times mid-stream, and the warehouse still matched exactly (519,489 unique valid events, 1,017 dead letters, window sums equal to raw). Batching the sink took throughput from 339 to about 25,800 msg/s. Details in the sections below.
 
 ![architecture](docs/architecture.svg)
 
